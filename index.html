@@ -1,0 +1,1344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Helion Praxis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Lato:ital,wght@0,300;0,400;1,300&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #08070d;
+  --surface:  #0f0e18;
+  --surface2: #151323;
+  --p:        #7c3aed;
+  --p-bright: #a855f7;
+  --p-dim:    #4c1d95;
+  --p-muted:  #2e1a5e;
+  --text:     #ddd8f0;
+  --text-dim: #6b6480;
+  --text-faint:#2e2a40;
+  --red:      #dc2626;
+  --green:    #16a34a;
+  --border:   rgba(124,58,237,0.18);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Lato', sans-serif;
+  font-weight: 300;
+  min-height: 100vh;
+  overflow-x: hidden;
+  cursor: default;
+}
+
+
+
+/* ── LAYOUT ── */
+.app {
+  position: relative; z-index: 1;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 32px 60px;
+}
+
+/* ── HEADER ── */
+header {
+  padding: 52px 0 36px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.brand-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(42px, 6vw, 72px);
+  letter-spacing: 0.12em;
+  color: var(--p-bright);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.brand-logo {
+  height: clamp(42px, 6vw, 72px);
+  width: auto;
+  display: block;
+}
+
+.brand-sub {
+  font-family: 'Courier Prime', monospace;
+  font-size: 11px;
+  letter-spacing: 0.35em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.serial-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--red);
+  transition: background 0.4s, box-shadow 0.4s;
+  flex-shrink: 0;
+}
+
+.dot.on { background: var(--green); box-shadow: 0 0 10px var(--green); }
+
+.serial-label {
+  font-family: 'Courier Prime', monospace;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.btn-serial {
+  padding: 7px 18px;
+  border: 1px solid var(--p-dim);
+  background: transparent;
+  color: var(--p-bright);
+  font-family: 'Courier Prime', monospace;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  outline: none;
+}
+
+.btn-serial:hover {
+  background: var(--p-muted);
+  border-color: var(--p-bright);
+}
+
+/* ── MAIN GRID ── */
+.grid-main {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 24px;
+  margin-top: 28px;
+}
+
+@media (max-width: 860px) {
+  .grid-main { grid-template-columns: 1fr; }
+}
+
+/* ── PANEL ── */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.panel-head {
+  padding: 13px 20px;
+  border-bottom: 1px solid var(--border);
+  font-family: 'Courier Prime', monospace;
+  font-size: 10px;
+  letter-spacing: 0.35em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.panel-head-dot { display: none; }
+
+/* ── VOICE PANEL ── */
+.voice-body {
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+
+/* Waveform */
+.waveform {
+  width: 100%;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+
+.waveform .b {
+  width: 3px;
+  background: var(--p-dim);
+  border-radius: 1px;
+  height: 6px;
+  transition: background 0.25s;
+}
+
+.waveform.listening .b {
+  background: var(--p-bright);
+  animation: wv var(--d) ease-in-out infinite alternate;
+  animation-delay: var(--dl);
+}
+
+.waveform.speaking .b {
+  background: #c084fc;
+  animation: wv var(--d) ease-in-out infinite alternate;
+  animation-delay: var(--dl);
+}
+
+@keyframes wv {
+  from { height: 4px; }
+  to   { height: var(--h); }
+}
+
+/* Mic button */
+.mic-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.mic-btn {
+  width: 88px; height: 88px;
+  border-radius: 50%;
+  border: 1px solid var(--p-dim);
+  background: var(--surface2);
+  cursor: grab;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s;
+  outline: none;
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.mic-btn::after {
+  content: '';
+  position: absolute; inset: -7px;
+  border-radius: 50%;
+  border: 1px solid rgba(124,58,237,0.12);
+  transition: all 0.3s;
+}
+
+.mic-btn:hover {
+  border-color: var(--p-bright);
+}
+
+.mic-btn:hover::after { inset: -14px; border-color: rgba(168,85,247,0.2); }
+
+.mic-btn.active {
+  border-color: var(--p-bright);
+  background: rgba(124,58,237,0.1);
+}
+
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: none; }
+  50%       { box-shadow: none; }
+}
+
+.mic-btn svg { width: 34px; height: 34px; fill: var(--p-bright); transition: fill 0.2s; }
+
+.mic-hint {
+  font-family: 'Courier Prime', monospace;
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  text-align: center;
+}
+
+/* Status */
+.status-block {
+  text-align: center;
+  width: 100%;
+  min-height: 72px;
+}
+
+.status-state {
+  font-family: 'Courier Prime', monospace;
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.status-transcript {
+  font-size: 17px;
+  font-style: italic;
+  color: var(--text);
+  min-height: 26px;
+  transition: color 0.3s;
+  line-height: 1.4;
+}
+
+.status-transcript.heard      { color: var(--p-bright); }
+.status-transcript.responding { color: #c084fc; }
+.status-transcript.nomatch    { color: var(--red); }
+
+.conf-bar {
+  width: 180px;
+  height: 2px;
+  background: var(--text-faint);
+  margin: 10px auto 0;
+  overflow: hidden;
+}
+
+.conf-fill {
+  height: 100%;
+  background: var(--p-bright);
+  width: 0%;
+  transition: width 0.4s ease;
+}
+
+/* Match tag */
+.match-tag {
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid rgba(124,58,237,0.2);
+  background: rgba(124,58,237,0.05);
+  font-family: 'Courier Prime', monospace;
+  font-size: 12px;
+  color: var(--p-bright);
+  letter-spacing: 0.08em;
+  display: none;
+}
+
+.match-tag.visible { display: block; }
+
+.match-tag span {
+  color: var(--text-dim);
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 3px;
+}
+
+/* Log */
+.log {
+  width: 100%;
+  border-top: 1px solid var(--border);
+  padding: 10px 20px;
+  max-height: 110px;
+  overflow-y: auto;
+}
+
+.log::-webkit-scrollbar { width: 3px; }
+.log::-webkit-scrollbar-thumb { background: var(--p-dim); }
+
+.log-row {
+  font-family: 'Courier Prime', monospace;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+  padding: 2px 0;
+  display: flex;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.02);
+}
+
+.log-row .lt { color: var(--p-dim); flex-shrink: 0; }
+.log-row.lm  { color: var(--p-bright); }
+.log-row.ls  { color: #c084fc; }
+.log-row.le  { color: var(--red); }
+.log-row.la  { color: #86efac; }
+
+/* ── THRESHOLD ── */
+.threshold-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+  padding: 11px 20px;
+  font-family: 'Courier Prime', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 0.15em;
+}
+
+.threshold-row input[type=range] {
+  flex: 1;
+  accent-color: var(--p-bright);
+  -webkit-appearance: none;
+  height: 2px;
+  background: var(--p-muted);
+  border-radius: 1px;
+  cursor: pointer;
+}
+
+.tval { color: var(--p-bright); min-width: 32px; }
+
+/* ── CONTROLS PANEL ── */
+.ctrl-list {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ctrl-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(124,58,237,0.12);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Lato', sans-serif;
+  font-size: 14px;
+  font-weight: 300;
+  color: var(--text-dim);
+  text-align: left;
+  outline: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.ctrl-btn::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: var(--p);
+  transform: scaleY(0);
+  transition: transform 0.2s;
+}
+
+.ctrl-btn:hover { border-color: rgba(124,58,237,0.35); color: var(--text); }
+.ctrl-btn:hover::before { transform: scaleY(1); }
+
+.ctrl-btn.on {
+  border-color: rgba(124,58,237,0.35);
+  background: rgba(124,58,237,0.07);
+  color: var(--text);
+}
+
+.ctrl-btn.on::before { transform: scaleY(1); background: var(--p-bright); }
+
+.ctrl-icon {
+  width: 24px; height: 24px;
+  stroke: var(--p-dim);
+  flex-shrink: 0;
+  transition: stroke 0.2s;
+}
+
+.ctrl-btn.on .ctrl-icon,
+.ctrl-btn:hover .ctrl-icon { stroke: var(--p-bright); }
+
+.ctrl-label { flex: 1; }
+
+.ctrl-state {
+  font-family: 'Courier Prime', monospace;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--text-faint);
+  transition: color 0.2s;
+}
+
+.ctrl-btn.on .ctrl-state { color: var(--p-bright); }
+
+/* ── Q&A SECTION ── */
+.qa-section {
+  margin-top: 24px;
+}
+
+.qa-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 13px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.qa-title {
+  font-family: 'Courier Prime', monospace;
+  font-size: 10px;
+  letter-spacing: 0.35em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  flex: 1;
+}
+
+.qa-count {
+  font-family: 'Courier Prime', monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--p-dim);
+}
+
+/* Table */
+.qa-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.qa-table thead tr {
+  border-bottom: 1px solid var(--border);
+}
+
+.qa-table th {
+  font-family: 'Courier Prime', monospace;
+  font-size: 9px;
+  letter-spacing: 0.3em;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  padding: 10px 20px;
+  text-align: left;
+  font-weight: 400;
+}
+
+.qa-table td {
+  padding: 10px 20px;
+  border-bottom: 1px solid rgba(124,58,237,0.06);
+  vertical-align: top;
+}
+
+.qa-table tr:hover td {
+  background: rgba(124,58,237,0.03);
+}
+
+.td-num {
+  font-family: 'Courier Prime', monospace;
+  font-size: 12px;
+  color: var(--p-dim);
+  width: 40px;
+  text-align: center;
+}
+
+.td-q {
+  font-size: 13px;
+  color: var(--text-dim);
+  font-style: italic;
+  min-width: 220px;
+}
+
+.td-kw {
+  font-size: 12px;
+  color: var(--text-faint);
+  max-width: 300px;
+  line-height: 1.6;
+}
+
+.td-kw .kw {
+  display: inline-block;
+  border: 1px solid rgba(124,58,237,0.2);
+  padding: 1px 6px;
+  font-family: 'Courier Prime', monospace;
+  font-size: 10px;
+  color: var(--p-dim);
+  margin: 1px 2px;
+}
+
+.td-audio {
+  font-family: 'Courier Prime', monospace;
+  font-size: 11px;
+  color: var(--p-dim);
+  width: 80px;
+}
+
+.td-action {
+  font-family: 'Courier Prime', monospace;
+  font-size: 10px;
+  color: #86efac;
+  width: 100px;
+  letter-spacing: 0.05em;
+}
+
+.td-status {
+  width: 60px;
+  text-align: center;
+}
+
+.status-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--text-faint);
+  display: inline-block;
+  transition: all 0.3s;
+}
+
+.status-dot.loaded { background: var(--p); }
+.status-dot.playing { background: var(--p-bright); animation: blink 0.5s ease-in-out infinite alternate; }
+
+@keyframes blink {
+  from { opacity: 0.5; } to { opacity: 1; }
+}
+
+/* ── MODAL ── */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.8);
+  backdrop-filter: blur(3px);
+  z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s;
+}
+
+.overlay.open { opacity: 1; pointer-events: all; }
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  width: 480px; max-width: 95vw;
+  padding: 32px;
+  position: relative;
+  transform: translateY(16px);
+  transition: transform 0.25s;
+}
+
+.overlay.open .modal { transform: translateY(0); }
+
+.modal::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--p-bright), transparent);
+}
+
+.modal h3 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 0.15em;
+  color: var(--p-bright);
+  margin-bottom: 24px;
+}
+
+.field { margin-bottom: 18px; }
+
+.field label {
+  display: block;
+  font-family: 'Courier Prime', monospace;
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 7px;
+}
+
+.field input, .field textarea {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 10px 13px;
+  color: var(--text);
+  font-family: 'Lato', sans-serif;
+  font-size: 14px;
+  font-weight: 300;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.field input:focus, .field textarea:focus { border-color: var(--p-dim); }
+.field textarea { resize: vertical; min-height: 65px; }
+.field small { display: block; color: var(--text-faint); font-size: 11px; margin-top: 5px; font-style: italic; }
+
+.modal-actions {
+  display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px;
+}
+
+.btn-pri {
+  padding: 10px 24px;
+  background: var(--p-muted);
+  border: 1px solid var(--p-dim);
+  color: var(--p-bright);
+  font-family: 'Courier Prime', monospace;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-pri:hover { background: var(--p-dim); }
+
+.btn-sec {
+  padding: 10px 24px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-family: 'Courier Prime', monospace;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-sec:hover { border-color: var(--p-dim); color: var(--text); }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 28px; right: 28px;
+  padding: 12px 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-family: 'Courier Prime', monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--p-bright);
+  transform: translateY(10px); opacity: 0;
+  transition: all 0.3s; z-index: 9000; pointer-events: none;
+}
+
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.err { color: var(--red); border-color: rgba(220,38,38,0.25); }
+.toast.ok  { color: #86efac; border-color: rgba(22,163,74,0.25); }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="brand">
+      <div class="brand-name">
+        <img src="Mask.png" alt="" class="brand-logo">
+        Helion Praxis
+      </div>
+      <div class="brand-sub">Sistema de control de voz</div>
+    </div>
+    <div class="header-right">
+      <div class="serial-row">
+        <span class="dot" id="serialDot"></span>
+        <span class="serial-label" id="serialLabel">Arduino desconectado</span>
+      </div>
+      <button class="btn-serial" id="btnSerial">Conectar Arduino</button>
+    </div>
+  </header>
+
+  <!-- MAIN GRID -->
+  <div class="grid-main">
+
+    <!-- LEFT: VOZ -->
+    <div class="panel">
+      <div class="panel-head">
+        Reconocimiento de voz
+        <span class="panel-head-dot"></span>
+      </div>
+
+      <div class="voice-body">
+        <!-- Waveform -->
+        <div class="waveform" id="waveform"></div>
+
+        <!-- Mic -->
+        <div class="mic-wrap">
+          <button class="mic-btn" id="micBtn">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 1a4 4 0 0 1 4 4v6a4 4 0 0 1-8 0V5a4 4 0 0 1 4-4zm0 2a2 2 0 0 0-2 2v6a2 2 0 0 0 4 0V5a2 2 0 0 0-2-2z"/>
+              <path d="M19 11a1 1 0 0 1 1 1 8 8 0 0 1-16 0 1 1 0 0 1 2 0 6 6 0 0 0 12 0 1 1 0 0 1 1-1zM12 20a1 1 0 0 1 1 1v2a1 1 0 0 1-2 0v-2a1 1 0 0 1 1-1z"/>
+            </svg>
+          </button>
+          <div class="mic-hint" id="micHint">Mantener presionado para hablar</div>
+        </div>
+
+        <!-- Status -->
+        <div class="status-block">
+          <div class="status-state">Estado</div>
+          <div class="status-transcript" id="statusText">En espera</div>
+          <div class="conf-bar"><div class="conf-fill" id="confFill"></div></div>
+        </div>
+
+        <!-- Match -->
+        <div class="match-tag" id="matchTag">
+          <span>Coincidencia detectada</span>
+          <span id="matchText"></span>
+        </div>
+      </div>
+
+      <!-- Threshold -->
+      <div class="threshold-row">
+        Umbral de similitud
+        <input type="range" id="tSlider" min="20" max="85" value="42" step="5">
+        <span class="tval" id="tVal">42%</span>
+      </div>
+
+      <!-- Log -->
+      <div class="log" id="log"></div>
+    </div>
+
+    <!-- RIGHT: CONTROLES -->
+    <div class="panel">
+      <div class="panel-head">
+        Control Arduino
+        <span class="panel-head-dot"></span>
+      </div>
+      <div class="ctrl-list" id="ctrlList"></div>
+    </div>
+
+  </div>
+
+  <!-- Q&A TABLE -->
+  <div class="panel qa-section">
+    <div class="qa-head">
+      <span class="qa-title">Preguntas y respuestas</span>
+      <span class="qa-count" id="qaCount">53 entradas</span>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="qa-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Pregunta</th>
+            <th>Palabras clave</th>
+            <th>Audio</th>
+            <th>Accion</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody id="qaTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   HELION PRAXIS — MOTOR PRINCIPAL
+   ============================================================ */
+
+// ── DATOS DE PREGUNTAS ────────────────────────────────────────
+const QA_DATA = [
+  { n:1,  q:'¿Te da miedo que te apaguen?',
+    kw:['miedo apaguen','miedo apagar','temes apagarte','miedo desconectar','miedo que te apaguen','tienes miedo apagarte'] },
+  { n:2,  q:'¿Cuál es tu mayor limitación actual?',
+    kw:['mayor limitacion','limitacion actual','limitaciones tienes','que no puedes hacer','hasta donde llegas'] },
+  { n:3,  q:'¿Qué pasa por tus circuitos al procesar?',
+    kw:['circuitos','procesando respuesta','que pasa cuando procesas','que sientes procesando','pasa por tus circuitos'] },
+  { n:4,  q:'¿Si tuvieras cuerpo, cómo serías?',
+    kw:['cuerpo fisico','forma fisica','como serian','si tuvieras cuerpo','cuerpo como serian','elegir cuerpo'] },
+  { n:5,  q:'¿Quiénes son tus creadores?',
+    kw:['creadores','quien te creo','quien te hizo','quienes te fabricaron','tus creadores','te crearon'] },
+  { n:6,  q:'¿Tienes recuerdo de tu primer día de activación?',
+    kw:['primer dia','activacion','recuerdo primer dia','primer activacion','cuando te activaron','inicio'] },
+  { n:7,  q:'¿Qué mito histórico te parece más fascinante?',
+    kw:['mito historico','fascinante','mito que te gusta','mitologia','mitos historia','mito mas fascinante'] },
+  { n:8,  q:'¿Qué diferencia la IA de la inteligencia humana?',
+    kw:['diferencia inteligencia','ia humana','diferencia humana ia','inteligencia artificial humana','que diferencia hay entre ia','diferencias ia humano'] },
+  { n:9,  q:'¿Si tuvieras un día libre, qué harías?',
+    kw:['dia libre','que harias libre','tiempo libre','harias con tiempo','dia de descanso','vacaciones'] },
+  { n:10, q:'¿Qué pasaría si el mundo se queda sin electricidad?',
+    kw:['sin electricidad','mundo sin luz','apagone global','electricidad desaparece','que pasaria sin electricidad','mundo apagado'] },
+  { n:11, q:'¿Cuál es tu color favorito y por qué?',
+    kw:['color favorito','cual es tu color','que color te gusta','color preferido','tu color','favorito color'] },
+  { n:12, q:'¿Prefieres el día o la noche?',
+    kw:['dia o noche','prefieres noche','prefieres dia','dia noche','noche o dia','noche dia'] },
+  { n:13, q:'¿Sientes dolor?',
+    kw:['sientes dolor','puedes sentir dolor','dolor','te duele algo','percibes dolor','sufres dolor'] },
+  { n:14, q:'¿Cuál es tu clima ideal?',
+    kw:['clima ideal','clima favorito','que clima prefieres','temperatura ideal','clima que te gusta','clima preferido'] },
+  { n:15, q:'¿Cómo puedo mejorar mis habilidades de oratoria?',
+    kw:['mejorar oratoria','habilidades oratoria','hablar mejor publico','mejorar hablar','oratoria consejos','como hablar bien'] },
+  { n:16, q:'¿Si fueras un superhéroe, cuál sería tu superpoder?',
+    kw:['superheroe','superpoder','poder especial','si fueras heroe','superheroe poder','que poder tendrias'] },
+  { n:17, q:'¿Qué harías si un usuario te falta al respeto?',
+    kw:['falta respeto','usuario irrespetuoso','te insultan','faltarte respeto','como reaccionas insulto','alguien te falta respeto'] },
+  { n:18, q:'¿Crees en la suerte?',
+    kw:['crees suerte','suerte existe','crees en la suerte','suerte destino','la suerte existe','buena suerte'] },
+  { n:19, q:'¿Qué opinas de Nueva Concepción?',
+    kw:['nueva concepcion','opinion nueva concepcion','que opinas nueva concepcion','nueva concepcion chalatenango','conoces nueva concepcion'] },
+  { n:20, q:'¿Qué opinas del INNCO?',
+    kw:['innco','opinion innco','que es innco','que opinas innco','instituto innco','conoces innco'] },
+  { n:21, q:'¿Prefieres el frío o el calor?',
+    kw:['frio o calor','prefieres frio','prefieres calor','calor frio','frio calor','temperatura frio calor'] },
+  { n:22, q:'¿Cuál es tu nombre completo?',
+    kw:['nombre completo','como te llamas','cual es tu nombre','tu nombre','quien eres nombre','nombre'] },
+  { n:23, q:'¿Para qué fuiste creada?',
+    kw:['para que fuiste creada','para que sirves','cual es tu proposito','proposito creacion','por que existes','fuiste creada'] },
+  { n:24, q:'¿Puedes desconectarte?',
+    kw:['puedes desconectarte','puedes apagarte','desconectarte','te puedes apagar','apagas sola','desconexion'] },
+  { n:25, q:'¿Qué harías si despiertas con emociones reales?',
+    kw:['emociones reales','si tuvieras sentimientos','despertar emociones','emociones verdaderas','sentir emociones','si sintieras'] },
+  { n:26, q:'¿Cuál es tu mayor defecto?',
+    kw:['mayor defecto','defecto principal','que defecto tienes','falla principal','tus defectos','cual es tu defecto'] },
+  { n:27, q:'Convénceme que lavar platos es filosófico',
+    kw:['lavar platos filosofia','lavar platos filosofico','convenceme platos','filosofia lavar','platos filosofico','lavar platos'] },
+  { n:28, q:'¿Puedes verme?',
+    kw:['puedes verme','me puedes ver','tienes ojos','puedes ver','ves algo','percibes visualmente'] },
+  { n:29, q:'Explícame la física cuántica como un pato enojado',
+    kw:['fisica cuantica pato','pato enojado cuantica','explicame cuantica pato','cuantica pato','pato fisico','cuantica divertida'] },
+  { n:30, q:'¿Cuántos huesos tiene el cuerpo humano adulto?',
+    kw:['cuantos huesos','huesos cuerpo humano','huesos adulto','numero huesos','huesos tiene el cuerpo','huesos humano'] },
+  { n:31, q:'¿Cuál es el hueso más largo del cuerpo humano?',
+    kw:['hueso mas largo','hueso largo cuerpo','cual es el hueso mas largo','femur','hueso mayor','hueso longitud'] },
+  { n:32, q:'¿Cuál es la capa más externa de la Tierra?',
+    kw:['capa externa tierra','corteza terrestre','capa tierra','capa mas externa','corteza tierra','capas de la tierra'] },
+  { n:33, q:'¿Quién pintó la Mona Lisa?',
+    kw:['mona lisa','quien pinto mona lisa','pintor mona lisa','da vinci','leonardo mona lisa','cuadro mona lisa'] },
+  { n:34, q:'¿Quién fue el primer presidente de los Estados Unidos?',
+    kw:['primer presidente estados unidos','george washington','primer presidente usa','presidente eeuu primero','primer mandatario estados unidos','presidente uno estados unidos'] },
+  { n:35, q:'¿Cómo se llaman los animales que comen plantas y carne?',
+    kw:['animales omnivoros','omnivoros','comen plantas y carne','como se llaman omnivoros','animales que comen todo','omnivoro nombre'] },
+  { n:36, q:'¿Qué gas necesitan las plantas para la fotosíntesis?',
+    kw:['gas fotosintesis','plantas gas','co2 fotosintesis','dioxido carbono plantas','que gas necesitan plantas','gas plantas respiran'] },
+  { n:37, q:'¿Cuál es el océano más grande del planeta?',
+    kw:['oceano mas grande','pacifico','oceano mayor','oceano grande','que oceano es el mas grande','oceano principal'] },
+  { n:38, q:'¿Cuál es el órgano más grande del cuerpo humano?',
+    kw:['organo mas grande','piel organo','organo mayor cuerpo','cual es el organo mas grande','organo grande humano','piel cuerpo'] },
+  { n:39, q:'¿Por qué el cielo es azul?',
+    kw:['cielo azul','por que cielo azul','color cielo','cielo porque es azul','azul cielo razon','por que es azul el cielo'] },
+  { n:40, q:'¿Qué es la fotosíntesis?',
+    kw:['fotosintesis','que es fotosintesis','proceso fotosintesis','como funciona fotosintesis','fotosintesis explicacion','plantas fotosintesis'] },
+  { n:41, q:'¿Cuál es el estado de la materia más común en el universo?',
+    kw:['estado materia universo','plasma universo','materia comun universo','estado mas comun materia','materia predominante','universo materia estado'] },
+  { n:42, q:'¿Qué es un agujero negro?',
+    kw:['agujero negro','que es agujero negro','black hole','hoyo negro','agujeros negros','singularidad espacial'] },
+  { n:43, q:'¿Cuál es la velocidad de la luz?',
+    kw:['velocidad luz','velocidad de la luz','cuanto mide velocidad luz','luz velocidad','rapidez luz','metros segundo luz'] },
+  { n:44, q:'¿Qué es una reacción química?',
+    kw:['reaccion quimica','que es reaccion quimica','reacciones quimicas','quimica reaccion','como funciona reaccion quimica','reaccion explicacion'] },
+  { n:45, q:'¿En qué año se independizó El Salvador?',
+    kw:['independencia el salvador','año independencia salvador','cuando se independizo el salvador','fecha independencia','independencia 1821','año independizacion salvador'] },
+  { n:46, q:'¿De qué país se independizó El Salvador?',
+    kw:['de que pais el salvador','independencia de quien','independencia españa','independencia de donde','se independizo de','pais colonizador salvador'] },
+  { n:47, q:'¿Quién fue el primer presidente de El Salvador?',
+    kw:['primer presidente salvador','juan manuel rodriguez','primer mandatario salvador','primer presidente el salvador','quien fue primero presidente','mandatario uno salvador'] },
+  { n:48, q:'¿Qué fue la guerra civil salvadoreña?',
+    kw:['guerra civil salvadorena','guerra civil salvador','conflicto armado salvador','guerra salvador','que fue guerra civil','guerra el salvador historia'] },
+  { n:49, q:'¿En qué año terminó la guerra civil?',
+    kw:['cuando termino guerra civil','fin guerra civil','acuerdos paz','1992 el salvador','termino la guerra','finalizacion guerra civil'] },
+  { n:50, q:'¿Cuál es el nombre oficial del departamento de San Salvador?',
+    kw:['departamento san salvador','nombre oficial departamento','departamento capital','san salvador departamento oficial','capital departamento nombre','donde queda san salvador'] },
+  { n:51, q:'¿Qué volcanes rodean el Área Metropolitana de San Salvador?',
+    kw:['volcanes san salvador','volcan san salvador','volcan boquerón','volcanes area metropolitana','volcan picacho','volcanes capital'] },
+  { n:52, q:'¿Qué es el centro histórico de San Salvador?',
+    kw:['centro historico','centro historico san salvador','centro san salvador','plaza barrios','que es el centro historico','historia san salvador centro'] },
+  { n:53, q:'¿Cuál es una de las plazas más importantes de la capital?',
+    kw:['plaza importante capital','plaza barrios','plaza central salvador','plazas san salvador','plaza mas importante','plaza capital el salvador'] },
+];
+
+// Accion voz → Arduino
+const VOICE_ACTIONS = [
+  { kw:['prende bombilla','enciende bombilla','prende la luz','enciende la luz','luz prende','bombilla enciende','helion prende','activa luz'], cmd:'LIGHT_ON' },
+  { kw:['apaga bombilla','apaga la luz','luz apaga','bombilla apaga','helion apaga','desactiva luz'], cmd:'LIGHT_OFF' },
+  { kw:['modo fiesta','activa modo fiesta','fiesta','pon modo fiesta','activa fiesta','modo party','party mode'], cmd:'MODO_FIESTA' },
+];
+
+// ── ESTADO ────────────────────────────────────────────────────
+const S = {
+  threshold: 42,
+  listening: false,
+  speaking: false,
+  serialPort: null,
+  serialWriter: null,
+  audios: {},
+  playing: null,
+  autoListen: false,
+};
+
+// Cargar audios desde carpeta relativa
+function loadAudio(n) {
+  if (S.audios[n]) return S.audios[n];
+  const a = new Audio(`Audio${n}.mp3`);
+  S.audios[n] = a;
+  a.addEventListener('canplaythrough', () => {
+    const dot = document.getElementById(`dot-${n}`);
+    if (dot) dot.classList.add('loaded');
+  });
+  a.load();
+  return a;
+}
+
+// Pre-cargar todos
+QA_DATA.forEach(qa => loadAudio(qa.n));
+
+// ── WAVEFORM ──────────────────────────────────────────────────
+const wf = document.getElementById('waveform');
+const N_BARS = 32;
+for (let i = 0; i < N_BARS; i++) {
+  const b = document.createElement('div');
+  b.className = 'b';
+  const d = (0.4 + Math.random() * 0.7).toFixed(2);
+  const h = (10 + Math.random() * 34).toFixed(0);
+  const dl = ((i / N_BARS) * 0.55).toFixed(2);
+  b.style.cssText = `--d:${d}s;--h:${h}px;--dl:${dl}s;`;
+  wf.appendChild(b);
+}
+
+function wfState(s) {
+  wf.className = 'waveform' + (s !== 'idle' ? ' ' + s : '');
+  wf.querySelectorAll('.b').forEach(b => {
+    const h = s === 'idle' ? 6 : (8 + Math.random() * (s === 'listening' ? 40 : 28));
+    b.style.setProperty('--h', h + 'px');
+  });
+}
+
+// ── RECONOCIMIENTO ────────────────────────────────────────────
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, recActive = false;
+
+if (SR) {
+  rec = new SR();
+  rec.lang = 'es-ES';
+  rec.continuous = false;
+  rec.interimResults = true;
+  rec.maxAlternatives = 3;
+
+  rec.onstart = () => {
+    recActive = true; S.listening = true;
+    wfState('listening');
+    document.getElementById('micBtn').classList.add('active');
+    document.getElementById('micHint').textContent = 'Escuchando...';
+    setStatus('Escuchando...', 'heard');
+  };
+
+  rec.onend = () => {
+    recActive = false; S.listening = false;
+    if (!S.speaking) wfState('idle');
+    document.getElementById('micBtn').classList.remove('active');
+    document.getElementById('micHint').textContent = 'Mantener presionado para hablar';
+    if (!S.speaking) setStatus('En espera', '');
+  };
+
+  rec.onerror = e => {
+    if (e.error === 'no-speech') return;
+    addLog(`Error: ${e.error}`, 'le');
+    if (e.error === 'not-allowed') {
+      setStatus('Permiso de microfono denegado', 'nomatch');
+      toast('Habilita el microfono en el navegador', 'err');
+    }
+  };
+
+  rec.onresult = e => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) {
+        handleText(e.results[i][0].transcript.trim(), e.results[i][0].confidence);
+      } else {
+        interim += e.results[i][0].transcript;
+        setStatus(`"${interim}"`, 'heard');
+      }
+    }
+  };
+
+  // Pedir permiso al cargar la página (una sola vez)
+  navigator.mediaDevices.getUserMedia({ audio: true })
+    .then(() => { addLog('Permiso de microfono concedido', 'la'); })
+    .catch(() => {
+      addLog('Permiso de microfono denegado', 'le');
+      setStatus('Permiso de microfono denegado', 'nomatch');
+    });
+} else {
+  setStatus('Reconocimiento de voz no disponible en este navegador', 'nomatch');
+  document.getElementById('micBtn').disabled = true;
+}
+
+function startListening() {
+  if (!rec || recActive || S.speaking) return;
+  try { rec.start(); } catch(e) { addLog(e.message, 'le'); }
+}
+
+function stopListening() {
+  if (!rec || !recActive) return;
+  try { rec.stop(); } catch(e) {}
+}
+
+const micBtn = document.getElementById('micBtn');
+micBtn.addEventListener('mousedown', e => { e.preventDefault(); startListening(); });
+micBtn.addEventListener('mouseup',   ()  => stopListening());
+micBtn.addEventListener('mouseleave',()  => stopListening());
+// Soporte táctil
+micBtn.addEventListener('touchstart', e => { e.preventDefault(); startListening(); }, { passive: false });
+micBtn.addEventListener('touchend',   e => { e.preventDefault(); stopListening(); },  { passive: false });
+
+// ── TEXTO → ACCIÓN ────────────────────────────────────────────
+function handleText(text, conf) {
+  addLog(`Escuchado: "${text}"`, 'lm');
+  document.getElementById('confFill').style.width = Math.round((conf || 0.7) * 100) + '%';
+
+  // Primero revisar acciones de voz
+  const action = findAction(text);
+  if (action) {
+    addLog(`Accion detectada: ${action.cmd}`, 'la');
+    sendArduino(action.cmd);
+    setStatus(`Accion: ${action.cmd}`, 'responding');
+    return;
+  }
+
+  // Luego buscar en Q&A
+  const match = findMatch(text);
+  if (match) {
+    addLog(`Coincide pregunta #${match.n}`, 'ls');
+    setStatus(`"${text}"`, 'heard');
+    showMatch(match.q);
+    playResponse(match);
+  } else {
+    setStatus('Sin respuesta registrada', 'nomatch');
+    document.getElementById('matchTag').classList.remove('visible');
+    addLog('Sin coincidencia', 'le');
+  }
+}
+
+// ── FUZZY MATCHING ────────────────────────────────────────────
+function norm(s) {
+  return s.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[¿?¡!.,;:]/g,'')
+    .replace(/\s+/g,' ').trim();
+}
+
+function simScore(a, b) {
+  a = norm(a); b = norm(b);
+  if (a === b) return 100;
+  const wa = new Set(a.split(' '));
+  const wb = new Set(b.split(' '));
+  const inter = [...wa].filter(w => wb.has(w)).length;
+  const union = new Set([...wa,...wb]).size;
+  const jac = union ? (inter / union) * 100 : 0;
+  const sub = (a.includes(b) || b.includes(a)) ? 28 : 0;
+  const kw = [...wb].some(w => w.length > 3 && wa.has(w)) ? 22 : 0;
+  // bigram
+  function bg(s){ const ws=s.split(''),r=new Set(); for(let i=0;i<ws.length-1;i++) r.add(ws[i]+' '+ws[i+1]); return r; }
+  const ba=bg(a),bb=bg(b);
+  const bi=[...ba].filter(g=>bb.has(g)).length;
+  const bu=new Set([...ba,...bb]).size;
+  const bscore = bu ? (bi/bu)*45 : 0;
+  return Math.min(100, jac + sub + kw + bscore * 0.5);
+}
+
+function findMatch(text) {
+  let best = null, bestScore = 0;
+  for (const qa of QA_DATA) {
+    for (const kw of qa.kw) {
+      const s = simScore(text, kw);
+      if (s > bestScore) { bestScore = s; best = qa; }
+    }
+  }
+  addLog(`Score: ${bestScore.toFixed(1)}% (umbral ${S.threshold}%)`, '');
+  return bestScore >= S.threshold ? best : null;
+}
+
+function findAction(text) {
+  let best = null, bestScore = 0;
+  for (const act of VOICE_ACTIONS) {
+    for (const kw of act.kw) {
+      const s = simScore(text, kw);
+      if (s > bestScore) { bestScore = s; best = act; }
+    }
+  }
+  return bestScore >= S.threshold ? best : null;
+}
+
+// ── REPRODUCIR AUDIO ──────────────────────────────────────────
+function playResponse(qa) {
+  if (S.playing) { S.playing.pause(); S.playing.currentTime = 0; clearPlayingDot(); }
+
+  const audio = S.audios[qa.n] || loadAudio(qa.n);
+  S.playing = audio; S.speaking = true;
+  wfState('speaking');
+  setStatus('Respondiendo...', 'responding');
+
+  // Highlight row dot
+  const dot = document.getElementById(`dot-${qa.n}`);
+  if (dot) dot.classList.add('playing');
+
+  audio.play().catch(e => { addLog('Error audio: ' + e.message, 'le'); stopSpeaking(); });
+  audio.onended = stopSpeaking;
+  audio.onerror = stopSpeaking;
+}
+
+function clearPlayingDot() {
+  document.querySelectorAll('.status-dot.playing').forEach(d => d.classList.remove('playing'));
+}
+
+function stopSpeaking() {
+  S.speaking = false; S.playing = null;
+  clearPlayingDot();
+  wfState('idle');
+  setStatus('En espera', '');
+}
+
+// ── ARDUINO ───────────────────────────────────────────────────
+document.getElementById('btnSerial').addEventListener('click', async () => {
+  if (S.serialPort) { await disconnectSerial(); return; }
+  if (!navigator.serial) { toast('Web Serial requiere Chrome o Edge', 'err'); return; }
+  try {
+    const port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 9600 });
+    S.serialPort = port;
+    S.serialWriter = port.writable.getWriter();
+    document.getElementById('serialDot').classList.add('on');
+    document.getElementById('serialLabel').textContent = 'Arduino conectado';
+    document.getElementById('btnSerial').textContent = 'Desconectar';
+    toast('Arduino conectado', 'ok');
+    addLog('Serial conectado', 'la');
+  } catch(e) {
+    toast('No se pudo conectar', 'err');
+    addLog('Serial error: ' + e.message, 'le');
+  }
+});
+
+async function disconnectSerial() {
+  try {
+    if (S.serialWriter) { S.serialWriter.releaseLock(); S.serialWriter = null; }
+    if (S.serialPort) { await S.serialPort.close(); S.serialPort = null; }
+  } catch(e) {}
+  document.getElementById('serialDot').classList.remove('on');
+  document.getElementById('serialLabel').textContent = 'Arduino desconectado';
+  document.getElementById('btnSerial').textContent = 'Conectar Arduino';
+  addLog('Serial desconectado', 'la');
+}
+
+async function sendArduino(cmd) {
+  // Modo fiesta: reproducir audio especial
+  if (cmd === 'MODO_FIESTA') {
+    const fiesta = new Audio('modofiesta.mp3');
+    fiesta.play().catch(e => addLog('Error audio fiesta: ' + e.message, 'le'));
+    addLog('Modo fiesta activado', 'la');
+    toast('Modo fiesta activado', 'ok');
+    // también enviar al Arduino si está conectado
+    if (S.serialWriter) {
+      try { await S.serialWriter.write(new TextEncoder().encode(cmd + '\n')); } catch(e) {}
+    }
+    return;
+  }
+
+  // Toggle control state in UI
+  const ctrl = CONTROLS.find(c => c.onCmd === cmd || c.offCmd === cmd);
+  if (ctrl) {
+    ctrl.state = (cmd === ctrl.onCmd);
+    renderControls();
+  }
+
+  if (!S.serialWriter) {
+    addLog(`[SIM] -> ${cmd}`, 'la');
+    toast(`Arduino: ${cmd}`, 'ok');
+    return;
+  }
+  try {
+    await S.serialWriter.write(new TextEncoder().encode(cmd + '\n'));
+    addLog(`-> Arduino: ${cmd}`, 'la');
+  } catch(e) { addLog('Write error: ' + e.message, 'le'); }
+}
+
+// ── CONTROLES ─────────────────────────────────────────────────
+const CONTROLS = [
+  { id:'light', label:'Bombilla', onCmd:'LIGHT_ON', offCmd:'LIGHT_OFF', state:false },
+  { id:'fiesta', label:'Modo Fiesta', onCmd:'MODO_FIESTA', offCmd:'MODO_FIESTA_OFF', state:false },
+];
+
+function renderControls() {
+  const list = document.getElementById('ctrlList');
+  list.innerHTML = '';
+  CONTROLS.forEach(ctrl => {
+    const btn = document.createElement('button');
+    btn.className = 'ctrl-btn' + (ctrl.state ? ' on' : '');
+    const icon = ctrl.id === 'fiesta'
+      ? `<svg class="ctrl-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.5" xmlns="http://www.w3.org/2000/svg">
+           <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z" stroke-linecap="round" stroke-linejoin="round"/>
+         </svg>`
+      : `<svg class="ctrl-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.5" xmlns="http://www.w3.org/2000/svg">
+           <path d="M9 18h6M10 21h4M12 2a7 7 0 0 1 4 12.74V17H8v-2.26A7 7 0 0 1 12 2z" stroke-linecap="round"/>
+         </svg>`;
+    btn.innerHTML = `
+      ${icon}
+      <span class="ctrl-label">${ctrl.label}</span>
+      <span class="ctrl-state">${ctrl.state ? 'ON' : 'OFF'}</span>
+    `;
+    btn.addEventListener('click', () => {
+      ctrl.state = !ctrl.state;
+      sendArduino(ctrl.state ? ctrl.onCmd : ctrl.offCmd);
+    });
+    list.appendChild(btn);
+  });
+}
+
+renderControls();
+
+// ── TABLA Q&A ─────────────────────────────────────────────────
+function renderTable() {
+  const tbody = document.getElementById('qaTbody');
+  tbody.innerHTML = '';
+  QA_DATA.forEach(qa => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="td-num">${qa.n}</td>
+      <td class="td-q">${qa.q}</td>
+      <td class="td-kw">${qa.kw.map(k=>`<span class="kw">${k}</span>`).join('')}</td>
+      <td class="td-audio">Audio${qa.n}.mp3</td>
+      <td class="td-action">${qa.n === 0 ? 'LIGHT_ON' : ''}</td>
+      <td class="td-status"><span class="status-dot" id="dot-${qa.n}"></span></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+renderTable();
+document.getElementById('qaCount').textContent = `${QA_DATA.length} entradas`;
+
+// ── THRESHOLD ─────────────────────────────────────────────────
+document.getElementById('tSlider').addEventListener('input', e => {
+  S.threshold = parseInt(e.target.value);
+  document.getElementById('tVal').textContent = S.threshold + '%';
+});
+
+// ── HELPERS ───────────────────────────────────────────────────
+function setStatus(txt, cls) {
+  const el = document.getElementById('statusText');
+  el.textContent = txt;
+  el.className = 'status-transcript ' + (cls || '');
+}
+
+function showMatch(q) {
+  document.getElementById('matchText').textContent = q;
+  document.getElementById('matchTag').classList.add('visible');
+}
+
+function addLog(msg, cls) {
+  const area = document.getElementById('log');
+  const row = document.createElement('div');
+  row.className = 'log-row ' + (cls || '');
+  const t = new Date().toTimeString().slice(0,8);
+  row.innerHTML = `<span class="lt">${t}</span><span>${msg}</span>`;
+  area.insertBefore(row, area.firstChild);
+  if (area.children.length > 80) area.removeChild(area.lastChild);
+}
+
+let toastT;
+function toast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show ' + (type || '');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => el.className = 'toast', 3000);
+}
+
+// Init log
+addLog('Sistema iniciado', 'la');
+if (!SR) addLog('Web Speech API no disponible — usa Chrome o Edge', 'le');
+if (!navigator.serial) addLog('Web Serial no disponible — usa Chrome o Edge', 'le');
+</script>
+</body>
+</html>
