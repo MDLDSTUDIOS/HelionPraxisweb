@@ -941,8 +941,8 @@ const QA_DATA = [
 
 // Accion voz → Arduino
 const VOICE_ACTIONS = [
-  { kw:['prende bombilla','enciende bombilla','prende la luz','enciende la luz','luz prende','bombilla enciende','helion prende','activa luz'], cmd:'LIGHT_ON' },
-  { kw:['apaga bombilla','apaga la luz','luz apaga','bombilla apaga','helion apaga','desactiva luz'], cmd:'LIGHT_OFF' },
+  { kw:['prende bombilla','enciende bombilla','prende la luz','enciende la luz','luz prende','bombilla enciende','helion prende','activa luz','enciende las luces','prende las luces'], cmd:'LIGHT_ON' },
+  { kw:['apaga bombilla','apaga la luz','luz apaga','bombilla apaga','helion apaga','desactiva luz','apaga las luces'], cmd:'LIGHT_OFF' },
   { kw:['modo fiesta','activa modo fiesta','fiesta','pon modo fiesta','activa fiesta','modo party','party mode'], cmd:'MODO_FIESTA' },
 ];
 
@@ -953,9 +953,13 @@ const S = {
   speaking: false,
   serialPort: null,
   serialWriter: null,
+  serialReader: null,
   audios: {},
   playing: null,
   autoListen: false,
+  lightOn: false,
+  partyInterval: null,
+  lastAlertAt: 0,
 };
 
 // Cargar audios desde carpeta relativa
@@ -973,6 +977,10 @@ function loadAudio(n) {
 
 // Pre-cargar todos
 QA_DATA.forEach(qa => loadAudio(qa.n));
+
+// Audio de alerta del sensor ultrasonico (precargado aparte)
+const alertAudio = new Audio('Alerta.mp3');
+alertAudio.load();
 
 // ── WAVEFORM ──────────────────────────────────────────────────
 const wf = document.getElementById('waveform');
@@ -1151,6 +1159,47 @@ function findAction(text) {
   return bestScore >= S.threshold ? best : null;
 }
 
+// ── COLORES DE LUCES ─────────────────────────────────────────
+// Rosa-morado: color base cuando la luz esta encendida en reposo
+const COLOR_ON      = [255, 20, 180];  // rosa-morado
+// Morado oscuro / indigo: mientras Helion esta hablando (reproduciendo audio)
+const COLOR_SPEAKING = [75, 0, 130];   // morado oscuro / indigo
+
+// Manda un color RGB al Arduino como "COLOR:r,g,b"
+async function sendColor(r, g, b) {
+  const cmd = `COLOR:${r},${g},${b}`;
+  if (!S.serialWriter) {
+    addLog(`[SIM] -> ${cmd}`, 'la');
+    return;
+  }
+  try {
+    await S.serialWriter.write(new TextEncoder().encode(cmd + '\n'));
+    addLog(`-> Arduino: ${cmd}`, 'la');
+  } catch(e) { addLog('Write error: ' + e.message, 'le'); }
+}
+
+// Arranca el efecto de "modo fiesta": colores random rapidos
+function startPartyEffect() {
+  stopPartyEffect(); // por si ya habia uno corriendo
+  S.partyInterval = setInterval(() => {
+    const r = Math.floor(Math.random() * 256);
+    const g = Math.floor(Math.random() * 256);
+    const b = Math.floor(Math.random() * 256);
+    sendColor(r, g, b);
+  }, 120); // cada 120ms cambia de color, efecto disco
+}
+
+// Detiene el efecto de fiesta y regresa al color que corresponda
+function stopPartyEffect() {
+  if (S.partyInterval) {
+    clearInterval(S.partyInterval);
+    S.partyInterval = null;
+    // Al terminar, si la luz sigue encendida, vuelve al rosa-morado base
+    if (S.lightOn) sendColor(...COLOR_ON);
+    else sendColor(0, 0, 0);
+  }
+}
+
 // ── REPRODUCIR AUDIO ──────────────────────────────────────────
 function playResponse(qa) {
   if (S.playing) { S.playing.pause(); S.playing.currentTime = 0; clearPlayingDot(); }
@@ -1159,6 +1208,9 @@ function playResponse(qa) {
   S.playing = audio; S.speaking = true;
   wfState('speaking');
   setStatus('Respondiendo...', 'responding');
+
+  // Si la luz esta encendida, mientras habla se pone morado oscuro
+  if (S.lightOn) sendColor(...COLOR_SPEAKING);
 
   // Highlight row dot
   const dot = document.getElementById(`dot-${qa.n}`);
@@ -1178,6 +1230,9 @@ function stopSpeaking() {
   clearPlayingDot();
   wfState('idle');
   setStatus('En espera', '');
+
+  // Termino de hablar: si la luz sigue encendida, regresa al rosa-morado base
+  if (S.lightOn) sendColor(...COLOR_ON);
 }
 
 // ── ARDUINO ───────────────────────────────────────────────────
@@ -1194,6 +1249,7 @@ document.getElementById('btnSerial').addEventListener('click', async () => {
     document.getElementById('btnSerial').textContent = 'Desconectar';
     toast('Arduino conectado', 'ok');
     addLog('Serial conectado', 'la');
+    startSerialReadLoop(); // empieza a escuchar datos entrantes (sensor ultrasonico, etc.)
   } catch(e) {
     toast('No se pudo conectar', 'err');
     addLog('Serial error: ' + e.message, 'le');
@@ -1202,6 +1258,7 @@ document.getElementById('btnSerial').addEventListener('click', async () => {
 
 async function disconnectSerial() {
   try {
+    if (S.serialReader) { await S.serialReader.cancel(); S.serialReader = null; }
     if (S.serialWriter) { S.serialWriter.releaseLock(); S.serialWriter = null; }
     if (S.serialPort) { await S.serialPort.close(); S.serialPort = null; }
   } catch(e) {}
@@ -1211,8 +1268,69 @@ async function disconnectSerial() {
   addLog('Serial desconectado', 'la');
 }
 
+// ── LECTURA DE SERIAL (sensor ultrasonico) ─────────────────────
+// Protocolo esperado desde el Arduino, una linea de texto terminada en \n:
+//   "DIST:37"   -> distancia en cm medida por el sensor ultrasonico
+//   "ALERT"     -> el Arduino ya decidio que algo esta a <=50cm y avisa directo
+// Cualquiera de los dos formatos dispara el audio de alerta (con cooldown).
+async function startSerialReadLoop() {
+  if (!S.serialPort || !S.serialPort.readable) return;
+  const textDecoder = new TextDecoderStream();
+  const readableStreamClosed = S.serialPort.readable.pipeTo(textDecoder.writable);
+  const reader = textDecoder.readable.getReader();
+  S.serialReader = reader;
+
+  let buffer = '';
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += value;
+      let idx;
+      while ((idx = buffer.indexOf('\n')) >= 0) {
+        const line = buffer.slice(0, idx).trim();
+        buffer = buffer.slice(idx + 1);
+        if (line) handleSerialLine(line);
+      }
+    }
+  } catch(e) {
+    addLog('Lectura serial detenida: ' + e.message, 'le');
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+function handleSerialLine(line) {
+  addLog(`<- Arduino: ${line}`, 'ls');
+
+  if (line === 'ALERT') {
+    triggerUltrasonicAlert();
+    return;
+  }
+
+  const m = line.match(/^DIST:(\d+(?:\.\d+)?)/i);
+  if (m) {
+    const dist = parseFloat(m[1]);
+    if (dist <= 50) triggerUltrasonicAlert();
+  }
+}
+
+// Reproduce Alerta.mp3 cuando el sensor detecta algo a <=50cm.
+// Cooldown de 3s para que no se dispare en loop mientras el objeto sigue ahi.
+function triggerUltrasonicAlert() {
+  const now = Date.now();
+  if (now - S.lastAlertAt < 3000) return;
+  S.lastAlertAt = now;
+
+  addLog('Sensor ultrasonico: objeto a <=50cm, reproduciendo alerta', 'la');
+  try {
+    alertAudio.currentTime = 0;
+    alertAudio.play().catch(e => addLog('Error audio alerta: ' + e.message, 'le'));
+  } catch(e) { addLog('Error audio alerta: ' + e.message, 'le'); }
+}
+
 async function sendArduino(cmd) {
-  // Modo fiesta: reproducir audio especial
+  // Modo fiesta: reproducir audio especial + efecto de colores locos
   if (cmd === 'MODO_FIESTA') {
     const fiesta = new Audio('modofiesta.mp3');
     fiesta.play().catch(e => addLog('Error audio fiesta: ' + e.message, 'le'));
@@ -1222,7 +1340,19 @@ async function sendArduino(cmd) {
     if (S.serialWriter) {
       try { await S.serialWriter.write(new TextEncoder().encode(cmd + '\n')); } catch(e) {}
     }
+    startPartyEffect();
+    fiesta.onended = stopPartyEffect;
+    fiesta.onerror = stopPartyEffect;
     return;
+  }
+
+  // LIGHT_ON / LIGHT_OFF: ademas de encender/apagar, fija el color base
+  if (cmd === 'LIGHT_ON') {
+    S.lightOn = true;
+    await sendColor(...COLOR_ON);
+  } else if (cmd === 'LIGHT_OFF') {
+    S.lightOn = false;
+    await sendColor(0, 0, 0);
   }
 
   // Toggle control state in UI
