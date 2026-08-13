@@ -960,7 +960,12 @@ const S = {
   lightOn: false,
   partyInterval: null,
   lastAlertAt: 0,
+  sensorEnabled: true,
 };
+
+// ── CONFIG SENSOR ULTRASONICO ───────────────────────────────────
+const ALERT_COOLDOWN_MS = 10000;  // antes 3000 (3s) -> ahora 10s entre alertas
+const ALERT_DISTANCE_CM = 20;     // antes 50cm -> ahora dispara mas cerca del sensor
 
 // Cargar audios desde carpeta relativa
 function loadAudio(n) {
@@ -1311,15 +1316,18 @@ function handleSerialLine(line) {
   const m = line.match(/^DIST:(\d+(?:\.\d+)?)/i);
   if (m) {
     const dist = parseFloat(m[1]);
-    if (dist <= 50) triggerUltrasonicAlert();
+    if (dist <= ALERT_DISTANCE_CM) triggerUltrasonicAlert();
   }
 }
 
-// Reproduce Alerta.mp3 cuando el sensor detecta algo a <=50cm.
-// Cooldown de 3s para que no se dispare en loop mientras el objeto sigue ahi.
+// Reproduce Alerta.mp3 cuando el sensor detecta algo a <=ALERT_DISTANCE_CM.
+// Cooldown de ALERT_COOLDOWN_MS para que no se dispare en loop mientras el objeto sigue ahi.
+// Si el usuario desactivo el sensor con el boton, no hace nada.
 function triggerUltrasonicAlert() {
+  if (!S.sensorEnabled) return;
+
   const now = Date.now();
-  if (now - S.lastAlertAt < 3000) return;
+  if (now - S.lastAlertAt < ALERT_COOLDOWN_MS) return;
   S.lastAlertAt = now;
 
   addLog('Sensor ultrasonico: objeto a <=50cm, reproduciendo alerta', 'la');
@@ -1355,6 +1363,17 @@ async function sendArduino(cmd) {
     await sendColor(0, 0, 0);
   }
 
+  // SENSOR_ON / SENSOR_OFF: activa o desactiva la alerta del sensor ultrasonico
+  if (cmd === 'SENSOR_ON') {
+    S.sensorEnabled = true;
+    addLog('Sensor ultrasonico activado', 'la');
+    toast('Sensor ultrasonico activado', 'ok');
+  } else if (cmd === 'SENSOR_OFF') {
+    S.sensorEnabled = false;
+    addLog('Sensor ultrasonico desactivado', 'la');
+    toast('Sensor ultrasonico desactivado', 'ok');
+  }
+
   // Toggle control state in UI
   const ctrl = CONTROLS.find(c => c.onCmd === cmd || c.offCmd === cmd);
   if (ctrl) {
@@ -1377,6 +1396,7 @@ async function sendArduino(cmd) {
 const CONTROLS = [
   { id:'light', label:'Bombilla', onCmd:'LIGHT_ON', offCmd:'LIGHT_OFF', state:false },
   { id:'fiesta', label:'Modo Fiesta', onCmd:'MODO_FIESTA', offCmd:'MODO_FIESTA_OFF', state:false },
+  { id:'sensor', label:'Sensor Ultrasónico', onCmd:'SENSOR_ON', offCmd:'SENSOR_OFF', state:true },
 ];
 
 function renderControls() {
@@ -1388,6 +1408,11 @@ function renderControls() {
     const icon = ctrl.id === 'fiesta'
       ? `<svg class="ctrl-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.5" xmlns="http://www.w3.org/2000/svg">
            <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z" stroke-linecap="round" stroke-linejoin="round"/>
+         </svg>`
+      : ctrl.id === 'sensor'
+      ? `<svg class="ctrl-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.5" xmlns="http://www.w3.org/2000/svg">
+           <path d="M12 12a1 1 0 1 0 0 2 1 1 0 0 0 0-2z" stroke-linecap="round"/>
+           <path d="M8.5 8.5a5 5 0 0 1 7 0M5.5 5.5a9 9 0 0 1 13 0" stroke-linecap="round"/>
          </svg>`
       : `<svg class="ctrl-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.5" xmlns="http://www.w3.org/2000/svg">
            <path d="M9 18h6M10 21h4M12 2a7 7 0 0 1 4 12.74V17H8v-2.26A7 7 0 0 1 12 2z" stroke-linecap="round"/>
